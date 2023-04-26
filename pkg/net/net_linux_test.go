@@ -101,9 +101,7 @@ func TestParseEthtoolLinkInfo(t *testing.T) {
 			expected: &NIC{
 				Speed:                   "1000Mb/s",
 				Duplex:                  "Full",
-				SupportedPauseFrameUse:  &falsePtr,
 				SupportedPorts:          []string{"TP"},
-				SupportsAutoNegotiation: &truePtr,
 				Capabilities: []*NICCapability{
 					&NICCapability{
 						Name:      "auto-negotiation",
@@ -116,12 +114,8 @@ func TestParseEthtoolLinkInfo(t *testing.T) {
 						CanEnable: false,
 					},
 				},
-				SupportedWakeOnModes:      "pumbg",
-				Transceiver:               "internal",
-				AdvertisedAutoNegotiation: &truePtr,
-				AdvertisedPauseFrameUse:   &falsePtr,
-				AdvertisedWakeOnModes:     "d",
-				AutoNegotiation:           &truePtr,
+				SupportedWakeOnModes:      []string{"pumbg"},
+				AdvertisedWakeOnModes:     []string{"d"},
 				AdvertisedLinkModes: []string{
 					"10baseT/Half",
 					"10baseT/Full",

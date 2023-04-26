@@ -266,9 +266,9 @@ func (nic *NIC) setNicAttrEthtool(ctx *context.Context, dev string) error {
 		pauseFrameUse.IsEnabled = true
 	}
 
-	spfu, err = util.ParseBool(strings.Join(m["Supports pause frame use"], ""))
+	spfu, err := util.ParseBool(strings.Join(m["Supports pause frame use"], ""))
 	if spfu && err == nil {
-		pauseFrameUse.CanEnabled = true
+		pauseFrameUse.CanEnable = true
 	}
 
 	nic.Capabilities = append(nic.Capabilities, &pauseFrameUse)
@@ -284,7 +284,7 @@ func (nic *NIC) setNicAttrEthtool(ctx *context.Context, dev string) error {
 
 	san, err := util.ParseBool(strings.Join(m["Supports auto-negotiation"], ""))
 	if san && err == nil {
-		autoNegotiation.CanEnabled = true
+		autoNegotiation.CanEnable = true
 	}
 
 	nic.Capabilities = append(nic.Capabilities, &autoNegotiation)
