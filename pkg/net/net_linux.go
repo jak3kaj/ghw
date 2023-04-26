@@ -257,7 +257,12 @@ func (nic *NIC) setNicAttrEthtool(ctx *context.Context, dev string) error {
 	}
 
 	m := parseNicAttrEthtool(&out)
+	nic.updateNicAttrEthtool(m)
 
+	return nil
+}
+
+func (nic *NIC) updateNicAttrEthtool(m map[string][]string) {
 	// Pause Frame Use Capability
 	pauseFrameUse := NICCapability{Name: "pause-frame-use", IsEnabled: false, CanEnable: false}
 
@@ -299,8 +304,6 @@ func (nic *NIC) setNicAttrEthtool(ctx *context.Context, dev string) error {
 	nic.AdvertisedFECModes = m["Advertised FEC modes"]
 	nic.SupportedWakeOnModes = m["Supports Wake-on"]
 	nic.AdvertisedWakeOnModes = m["Wake-on"]
-
-	return nil
 }
 
 func parseNicAttrEthtool(out *bytes.Buffer) map[string][]string {

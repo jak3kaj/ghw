@@ -64,8 +64,6 @@ func TestParseEthtoolLinkInfo(t *testing.T) {
 		t.Skip("Skipping network tests.")
 	}
 
-	truePtr := true
-	falsePtr := false
 	tests := []struct {
 		input    string
 		expected *NIC
@@ -135,7 +133,9 @@ func TestParseEthtoolLinkInfo(t *testing.T) {
 	}
 
 	for x, test := range tests {
-		actual := netParseEthtoolLinkInfo(bytes.NewBufferString(test.input))
+		m  := parseNicAttrEthtool(bytes.NewBufferString(test.input))
+		actual := &NIC{}
+		actual.updateNicAttrEthtool(m)
 		if !reflect.DeepEqual(test.expected, actual) {
 			t.Fatalf("In test %d\nExpected:\n%v\nActual:\n%v\n", x, test.expected, actual)
 		}
