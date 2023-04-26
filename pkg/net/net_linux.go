@@ -69,10 +69,16 @@ func nics(ctx *context.Context) []*NIC {
 		nic.MacAddress = mac
 		if etAvailable {
 			nic.Capabilities = netDeviceCapabilities(ctx, filename)
-			nic.LinkInfo = netDeviceLinkInfo(ctx, filename)
+			// Sets NIC struct fields and appends NICCapability from ethtool output
+			if err := nic.setNicAttrEthtool(ctx, filename); err != nil {
+				// Sets NIC struct fields from data in SysFs if running ethtool
+				// returns an error
+				nic.setNicAttrSysFs(paths, filename)
+			}
 		} else {
 			nic.Capabilities = []*NICCapability{}
-			nic.LinkInfo = netDeviceLimitedLinkInfo(paths, filename)
+			// Sets NIC struct fields from data in SysFs
+			nic.setNicAttrSysFs(paths, filename)
 		}
 
 		nic.PCIAddress = netDevicePCIAddress(paths.SysClassNet, filename)
@@ -224,24 +230,10 @@ func netDevicePCIAddress(netDevDir, netDevName string) *string {
 	return &pciAddr
 }
 
-func netDeviceLimitedLinkInfo(paths *linuxpath.Paths, dev string) *NICLinkInfo {
-	// Get speed, duplex, and link detected from /sys/class/net/$DEVICE/ directory
-	speed := readFile(filepath.Join(paths.SysClassNet, dev, "speed"))
-	duplex := readFile(filepath.Join(paths.SysClassNet, dev, "duplex"))
-	carrier := readFile(filepath.Join(paths.SysClassNet, dev, "carrier"))
-	link, err := util.ParseBool(carrier)
-	if err == nil {
-		return &NICLinkInfo{
-			Speed:        speed,
-			Duplex:       duplex,
-			LinkDetected: &link,
-		}
-	} else {
-		return &NICLinkInfo{
-			Speed:  speed,
-			Duplex: duplex,
-		}
-	}
+func (nic *NIC) setNicAttrSysFs(paths *linuxpath.Paths, dev string) {
+	// Get speed and duplex from /sys/class/net/$DEVICE/ directory
+	nic.Speed = readFile(filepath.Join(paths.SysClassNet, dev, "speed"))
+	nic.Duplex = readFile(filepath.Join(paths.SysClassNet, dev, "duplex"))
 }
 
 func readFile(path string) string {
@@ -252,7 +244,7 @@ func readFile(path string) string {
 	return strings.TrimSpace(string(contents))
 }
 
-func netDeviceLinkInfo(ctx *context.Context, dev string) *NICLinkInfo {
+func (nic *NIC) setNicAttrEthtool(ctx *context.Context, dev string) error {
 	path, _ := exec.LookPath("ethtool")
 	cmd := exec.Command(path, dev)
 	var out bytes.Buffer
@@ -261,12 +253,57 @@ func netDeviceLinkInfo(ctx *context.Context, dev string) *NICLinkInfo {
 	if err != nil {
 		msg := fmt.Sprintf("could not grab NIC link info for %s: %s", dev, err)
 		ctx.Warn(msg)
-		return &NICLinkInfo{}
+		return err
 	}
-	return netParseEthtoolLinkInfo(&out)
+
+	m := parseNicAttrEthtool(&out)
+
+	// Pause Frame Use Capability
+	pauseFrameUse := NICCapability{Name: "pause-frame-use", IsEnabled: false, CanEnable: false}
+
+	apfu, err := util.ParseBool(strings.Join(m["Advertised pause frame use"], ""))
+	if apfu && err == nil {
+		pauseFrameUse.IsEnabled = true
+	}
+
+	spfu, err = util.ParseBool(strings.Join(m["Supports pause frame use"], ""))
+	if spfu && err == nil {
+		pauseFrameUse.CanEnabled = true
+	}
+
+	nic.Capabilities = append(nic.Capabilities, &pauseFrameUse)
+
+	// AutoNegotiation Capability
+	autoNegotiation := NICCapability{Name: "auto-negotiation", IsEnabled: false, CanEnable: false}
+
+	an, an_err := util.ParseBool(strings.Join(m["Auto-negotiation"], ""))
+	aan, aan_err := util.ParseBool(strings.Join(m["Advertised auto-negotiation"], ""))
+	if an && aan && aan_err == nil && an_err == nil {
+		autoNegotiation.IsEnabled = true
+	}
+
+	san, err := util.ParseBool(strings.Join(m["Supports auto-negotiation"], ""))
+	if san && err == nil {
+		autoNegotiation.CanEnabled = true
+	}
+
+	nic.Capabilities = append(nic.Capabilities, &autoNegotiation)
+
+	// Update NIC Attributes
+	nic.Speed = strings.Join(m["Speed"], "")
+	nic.Duplex = strings.Join(m["Duplex"], "")
+	nic.SupportedLinkModes = m["Supported link modes"]
+	nic.SupportedPorts = m["Supported ports"]
+	nic.SupportedFECModes = m["Supported FEC modes"]
+	nic.AdvertisedLinkModes = m["Advertised link modes"]
+	nic.AdvertisedFECModes = m["Advertised FEC modes"]
+	nic.SupportedWakeOnModes = m["Supports Wake-on"]
+	nic.AdvertisedWakeOnModes = m["Wake-on"]
+
+	return nil
 }
 
-func netParseEthtoolLinkInfo(out *bytes.Buffer) *NICLinkInfo {
+func parseNicAttrEthtool(out *bytes.Buffer) map[string][]string {
 
 	// The out variable will now contain something that looks like the
 	// following.
@@ -325,76 +362,5 @@ func netParseEthtoolLinkInfo(out *bytes.Buffer) *NICLinkInfo {
 		}
 	}
 
-	var nilBool *bool
-
-	var autoNegotiation *bool
-	an, err	:= util.ParseBool(strings.Join(m["Auto-negotiation"], ""))
-	if err != nil {
-		autoNegotiation	= nilBool
-	} else {
-		autoNegotiation	= &an
-	}
-
-	var linkDetected *bool
-	ld, err	:= util.ParseBool(strings.Join(m["Link detected"], ""))
-	if err != nil {
-		linkDetected = nilBool
-	} else {
-		linkDetected = &ld
-	}
-
-	var supportedPauseFrameUse *bool
-	spfu, err := util.ParseBool(strings.Join(m["Supported pause frame use"], ""))
-	if err != nil {
-		supportedPauseFrameUse = nilBool
-	} else {
-		supportedPauseFrameUse = &spfu
-	}
-
-	var supportsAutoNegotiation *bool
-	san, err := util.ParseBool(strings.Join(m["Supports auto-negotiation"], ""))
-	if err != nil {
-		supportsAutoNegotiation = nilBool
-	} else {
-		supportsAutoNegotiation = &san
-	}
-
-	var advertisedPauseFrameUse *bool
-	apfu, err := util.ParseBool(strings.Join(m["Advertised pause frame use"], ""))
-	if err != nil {
-		advertisedPauseFrameUse = nilBool
-	} else {
-		advertisedPauseFrameUse = &apfu
-	}
-
-	var advertisedAutoNegotiation *bool
-	aan, err := util.ParseBool(strings.Join(m["Advertised auto-negotiation"], ""))
-	if err != nil {
-		advertisedAutoNegotiation = nilBool
-	} else {
-		advertisedAutoNegotiation = &aan
-	}
-
-	return &NICLinkInfo {
-		Speed:                     strings.Join(m["Speed"], ""),
-		Duplex:                    strings.Join(m["Duplex"], ""),
-		AutoNegotiation:           autoNegotiation,
-		Port:                      strings.Join(m["Port"], ""),
-		PHYAD:                     strings.Join(m["PHYAD"], ""),
-		Transceiver:               strings.Join(m["Transceiver"], ""),
-		MDIX:                      m["MDI-X"],
-		SupportsWakeOn:            strings.Join(m["Supports Wake-on"], ""),
-		WakeOn:                    strings.Join(m["Wake-on"], ""),
-		LinkDetected:              linkDetected,
-		SupportedPorts:            m["Supported ports"],
-		SupportedLinkModes:        m["Supported link modes"],
-		SupportedPauseFrameUse:	   supportedPauseFrameUse,
-		SupportsAutoNegotiation:   supportsAutoNegotiation,
-		SupportedFECModes:         m["Supported FEC modes"],
-		AdvertisedLinkModes:       m["Advertised link modes"],
-		AdvertisedPauseFrameUse:   advertisedPauseFrameUse,
-		AdvertisedAutoNegotiation: advertisedAutoNegotiation,
-		AdvertisedFECModes:        m["Advertised FEC modes"],
-		NETIFMsgLevel:             m["Current message level"],
-	}
+	return m
 }

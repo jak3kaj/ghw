@@ -68,7 +68,7 @@ func TestParseEthtoolLinkInfo(t *testing.T) {
 	falsePtr := false
 	tests := []struct {
 		input    string
-		expected *NICLinkInfo
+		expected *NIC
 	}{
 		{
 			input: `Settings for eth0:
@@ -98,35 +98,36 @@ func TestParseEthtoolLinkInfo(t *testing.T) {
                                drv probe link
 	Link detected: yes
 `,
-			expected: &NICLinkInfo{
+			expected: &NIC{
+				Speed:                   "1000Mb/s",
+				Duplex:                  "Full",
+				SupportedPauseFrameUse:  &falsePtr,
+				SupportedPorts:          []string{"TP"},
+				SupportsAutoNegotiation: &truePtr,
+				Capabilities: []*NICCapability{
+					&NICCapability{
+						Name:      "auto-negotiation",
+						IsEnabled: true,
+						CanEnable: true,
+					},
+					&NICCapability{
+						Name:      "pause-frame-use",
+						IsEnabled: false,
+						CanEnable: false,
+					},
+				},
+				SupportedWakeOnModes:      "pumbg",
+				Transceiver:               "internal",
 				AdvertisedAutoNegotiation: &truePtr,
 				AdvertisedPauseFrameUse:   &falsePtr,
+				AdvertisedWakeOnModes:     "d",
 				AutoNegotiation:           &truePtr,
-				Duplex:                    "Full",
-				LinkDetected:              &truePtr,
-				MDIX:                      []string{"off", "(auto)"},
-				Port:                      "TwistedPair",
-				PHYAD:                     "1",
-				Speed:                     "1000Mb/s",
-				SupportedPauseFrameUse:    &falsePtr,
-				SupportedPorts:            []string{"TP"},
-				SupportsAutoNegotiation:   &truePtr,
-				SupportsWakeOn:            "pumbg",
-				Transceiver:               "internal",
-				WakeOn:                    "d",
 				AdvertisedLinkModes: []string{
 					"10baseT/Half",
 					"10baseT/Full",
 					"100baseT/Half",
 					"100baseT/Full",
 					"1000baseT/Full",
-				},
-				NETIFMsgLevel: []string{
-					"0x00000007",
-					"(7)",
-					"drv",
-					"probe",
-					"link",
 				},
 				SupportedLinkModes: []string{
 					"10baseT/Half",
