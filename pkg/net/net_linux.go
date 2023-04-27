@@ -263,21 +263,6 @@ func (nic *NIC) setNicAttrEthtool(ctx *context.Context, dev string) error {
 }
 
 func (nic *NIC) updateNicAttrEthtool(m map[string][]string) {
-	// Pause Frame Use Capability
-	pauseFrameUse := NICCapability{Name: "pause-frame-use", IsEnabled: false, CanEnable: false}
-
-	apfu, err := util.ParseBool(strings.Join(m["Advertised pause frame use"], ""))
-	if apfu && err == nil {
-		pauseFrameUse.IsEnabled = true
-	}
-
-	spfu, err := util.ParseBool(strings.Join(m["Supports pause frame use"], ""))
-	if spfu && err == nil {
-		pauseFrameUse.CanEnable = true
-	}
-
-	nic.Capabilities = append(nic.Capabilities, &pauseFrameUse)
-
 	// AutoNegotiation Capability
 	autoNegotiation := NICCapability{Name: "auto-negotiation", IsEnabled: false, CanEnable: false}
 
@@ -293,6 +278,21 @@ func (nic *NIC) updateNicAttrEthtool(m map[string][]string) {
 	}
 
 	nic.Capabilities = append(nic.Capabilities, &autoNegotiation)
+
+	// Pause Frame Use Capability
+	pauseFrameUse := NICCapability{Name: "pause-frame-use", IsEnabled: false, CanEnable: false}
+
+	apfu, err := util.ParseBool(strings.Join(m["Advertised pause frame use"], ""))
+	if apfu && err == nil {
+		pauseFrameUse.IsEnabled = true
+	}
+
+	spfu, err := util.ParseBool(strings.Join(m["Supports pause frame use"], ""))
+	if spfu && err == nil {
+		pauseFrameUse.CanEnable = true
+	}
+
+	nic.Capabilities = append(nic.Capabilities, &pauseFrameUse)
 
 	// Update NIC Attributes
 	nic.Speed = strings.Join(m["Speed"], "")
