@@ -97,28 +97,16 @@ func TestParseEthtoolLinkInfo(t *testing.T) {
 	Link detected: yes
 `,
 			expected: &NIC{
-				Speed:                   "1000Mb/s",
-				Duplex:                  "Full",
-				SupportedPorts:          []string{"TP"},
-				Capabilities: []*NICCapability{
-					&NICCapability{
-						Name:      "auto-negotiation",
-						IsEnabled: true,
-						CanEnable: true,
-					},
-					&NICCapability{
-						Name:      "pause-frame-use",
-						IsEnabled: false,
-						CanEnable: false,
-					},
-				},
-				AdvertisedWakeOnModes:     []string{"Disabled"},
-				SupportedWakeOnModes:      []string{
+				Speed:                 "1000Mb/s",
+				Duplex:                "Full",
+				SupportedPorts:        []string{"TP"},
+				AdvertisedWakeOnModes: []string{"Disabled"},
+				SupportedWakeOnModes: []string{
 					"PHY",
 					"Unicast",
 					"Multicast",
 					"Broadcast",
-					"Magic"
+					"Magic",
 				},
 				AdvertisedLinkModes: []string{
 					"10baseT/Half",
@@ -134,12 +122,24 @@ func TestParseEthtoolLinkInfo(t *testing.T) {
 					"100baseT/Full",
 					"1000baseT/Full",
 				},
+				Capabilities: []*NICCapability{
+					&NICCapability{
+						Name:      "auto-negotiation",
+						IsEnabled: true,
+						CanEnable: true,
+					},
+					&NICCapability{
+						Name:      "pause-frame-use",
+						IsEnabled: false,
+						CanEnable: false,
+					},
+				},
 			},
 		},
 	}
 
 	for x, test := range tests {
-		m  := parseNicAttrEthtool(bytes.NewBufferString(test.input))
+		m := parseNicAttrEthtool(bytes.NewBufferString(test.input))
 		actual := &NIC{}
 		actual.updateNicAttrEthtool(m)
 		if !reflect.DeepEqual(test.expected, actual) {

@@ -302,8 +302,8 @@ func (nic *NIC) updateNicAttrEthtool(m map[string][]string) {
 	nic.SupportedFECModes = m["Supported FEC modes"]
 	nic.AdvertisedLinkModes = m["Advertised link modes"]
 	nic.AdvertisedFECModes = m["Advertised FEC modes"]
-	nic.SupportedWakeOnModes = wolModeNames(m["Supports Wake-on"])
-	nic.AdvertisedWakeOnModes = wolModeNames(m["Wake-on"])
+	nic.SupportedWakeOnModes = wolModeNames(strings.Join(m["Supports Wake-on"], ""))
+	nic.AdvertisedWakeOnModes = wolModeNames(strings.Join(m["Wake-on"], ""))
 }
 
 func wolModeNames(wolString string) []string {
@@ -319,10 +319,10 @@ func wolModeNames(wolString string) []string {
 		"d": "Disabled",
 	}
 
-	modeNames := make([]string)
+	var modeNames []string
 
 	for _, s := range wolString {
-		modeNames = append(modeNames, wolLookUp[s])
+		modeNames = append(modeNames, wolLookUp[string(s)])
 	}
 
 	return modeNames
