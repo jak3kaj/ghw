@@ -137,7 +137,7 @@ func TestParseEthtoolLinkInfo(t *testing.T) {
 		actual := &NIC{}
 		actual.updateNicAttrEthtool(m)
 		if !reflect.DeepEqual(test.expected, actual) {
-			t.Fatalf("In test %d\nExpected:\n%v\nActual:\n%v\n", x, test.expected, actual)
+			t.Fatalf("In test %d\nExpected:\n%+v\nActual:\n%+v\n", x, *test.expected, *actual)
 		}
 	}
 }
