@@ -112,8 +112,14 @@ func TestParseEthtoolLinkInfo(t *testing.T) {
 						CanEnable: false,
 					},
 				},
-				SupportedWakeOnModes:      []string{"pumbg"},
-				AdvertisedWakeOnModes:     []string{"d"},
+				AdvertisedWakeOnModes:     []string{"Disabled"},
+				SupportedWakeOnModes:      []string{
+					"PHY",
+					"Unicast",
+					"Multicast",
+					"Broadcast",
+					"Magic"
+				},
 				AdvertisedLinkModes: []string{
 					"10baseT/Half",
 					"10baseT/Full",

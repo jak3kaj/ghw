@@ -266,9 +266,9 @@ func (nic *NIC) updateNicAttrEthtool(m map[string][]string) {
 	// AutoNegotiation Capability
 	autoNegotiation := NICCapability{Name: "auto-negotiation", IsEnabled: false, CanEnable: false}
 
-	an, an_err := util.ParseBool(strings.Join(m["Auto-negotiation"], ""))
-	aan, aan_err := util.ParseBool(strings.Join(m["Advertised auto-negotiation"], ""))
-	if an && aan && aan_err == nil && an_err == nil {
+	an, anErr := util.ParseBool(strings.Join(m["Auto-negotiation"], ""))
+	aan, aanErr := util.ParseBool(strings.Join(m["Advertised auto-negotiation"], ""))
+	if an && aan && aanErr == nil && anErr == nil {
 		autoNegotiation.IsEnabled = true
 	}
 
@@ -302,8 +302,31 @@ func (nic *NIC) updateNicAttrEthtool(m map[string][]string) {
 	nic.SupportedFECModes = m["Supported FEC modes"]
 	nic.AdvertisedLinkModes = m["Advertised link modes"]
 	nic.AdvertisedFECModes = m["Advertised FEC modes"]
-	nic.SupportedWakeOnModes = m["Supports Wake-on"]
-	nic.AdvertisedWakeOnModes = m["Wake-on"]
+	nic.SupportedWakeOnModes = wolModeNames(m["Supports Wake-on"])
+	nic.AdvertisedWakeOnModes = wolModeNames(m["Wake-on"])
+}
+
+func wolModeNames(wolString string) []string {
+	wolLookUp := map[string]string{
+		"p": "PHY",
+		"u": "Unicast",
+		"m": "Multicast",
+		"b": "Broadcast",
+		"a": "ARP",
+		"g": "Magic",
+		"s": "MagicSecure",
+		"f": "Filter",
+		"d": "Disabled",
+	}
+
+	modeNames := make([]string)
+
+	for _, s := range wolString {
+		modeNames = append(modeNames, wolLookUp[s])
+	}
+
+	return modeNames
+
 }
 
 func parseNicAttrEthtool(out *bytes.Buffer) map[string][]string {
